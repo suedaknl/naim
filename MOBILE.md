@@ -18,9 +18,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 1 |
-| Total Weight (kg) | 5 |
-| Total Time (min) | 45 |
+| Total Iterations | 2 |
+| Total Weight (kg) | 25 |
+| Total Time (min) | 90 |
 | Failed Attempts | 1 |
 
 ---
@@ -57,5 +57,38 @@
 **Screenshot:** `local-testing via Expo Go`
 
 **Commit:** `Initial Build & Sword UI Pivot`
+
+---
+
+### 🏋️ Iteration 2 
+
+| Field | Value |
+|-------|-------|
+| Feature | `Stage 2: Functionality & Persistence` |
+| Weight | `20 kg` |
+| Tool Used | `Antigravity` |
+| Time | `45 min` |
+| Attempts | `1` |
+| Status | ✅ COMPLETED |
+
+**Prompt given to AI:**
+```
+"Stage 2: Functionality and Persistence. Let's make the 'Focus Battle' real.
+1. Timer Logic... 
+2. XP & Level System... 
+3. Persistence... 
+4. UI Feedback...
+5. Testing Shortcut..."
+```
+
+**What happened:**
+- **Core Logic:** Executed the functional UI timer logic. When the 25:00 countdown resolves to `00:00`, the active clock is halted and successfully passes over to the `'Victory'` or `'Level Up'` state overlay.
+- **Progression:** Wove an XP matrix seamlessly into the UI. Earning a normal victory triggers a solid `+10 XP` bump. Wrapping `100 XP` triggers a Level Up, organically refilling the daily `HP/MP` energy gauges simultaneously.
+- **Data Persistence:** Sourced and securely implemented the `@react-native-async-storage/async-storage` library. Handled local IO writes aggressively to persist `level`, `xp`, `hp`, and `mp` variables, ensuring state retention across restarts. 
+- **Testing Shortcut:** Bound a "Dev Backdoor" skip command to the top-left `NEON_CHROMA` context bar Avatar icon (`👤`). When triggered manually, it bypasses the standard 25-minute wait block and forces a `00:01` rapid jump to immediately manifest the gamification testing.
+
+**Screenshot:** `Local Testing (Expo Go)`
+
+**Commit:** `Stage 2 Iteration - The Gamification Layer`
 
 ---

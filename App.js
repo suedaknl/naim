@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Easing, SafeAreaView, StatusBar, Dimensions } from 'react-native';
 import Svg, { Polygon, Path, Circle } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// NO COMMENTS INSIDE SVG TAG TO PREVENT RENDERING TEXT ARTIFACTS
 const NeonSword = ({ color = '#39FF14' }) => (
   <Svg viewBox="0 0 100 300" width={100} height={240}>
     {/* Energy Core / Main Blade */}
@@ -38,21 +38,66 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
 
+  // Persistent Stats
+  const [level, setLevel] = useState(1);
+  const [xp, setXp] = useState(0);
+  const [hp, setHp] = useState(88);
+  const [mp, setMp] = useState(42);
+
+  // Overlay State
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayType, setOverlayType] = useState('conquered'); // 'conquered' or 'levelup'
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // Load Persisted Data
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const savedLevel = await AsyncStorage.getItem('@level');
+        const savedXp = await AsyncStorage.getItem('@xp');
+        const savedHp = await AsyncStorage.getItem('@hp');
+        const savedMp = await AsyncStorage.getItem('@mp');
+        
+        if (savedLevel !== null) setLevel(parseInt(savedLevel));
+        if (savedXp !== null) setXp(parseInt(savedXp));
+        if (savedHp !== null) setHp(parseInt(savedHp));
+        if (savedMp !== null) setMp(parseInt(savedMp));
+      } catch (e) {
+        console.warn('Failed to load storage', e);
+      }
+    };
+    loadStats();
+  }, []);
+
+  // Save Stats Helper
+  const saveStatsAsync = async (nLevel, nXp, nHp, nMp) => {
+    try {
+      await AsyncStorage.setItem('@level', nLevel.toString());
+      await AsyncStorage.setItem('@xp', nXp.toString());
+      await AsyncStorage.setItem('@hp', nHp.toString());
+      await AsyncStorage.setItem('@mp', nMp.toString());
+    } catch (e) {
+      console.warn('Failed to save to storage', e);
+    }
+  };
+
+  // Timer Effect
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((time) => time - 1);
       }, 1000);
-    } else if (timeLeft === 0) {
+    } else if (isActive && timeLeft === 0) {
+      // Time is up! Trigger Victory Logic
       clearInterval(interval);
-      setIsActive(false);
+      handleSessionComplete();
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
+  // Pulse effect Effect
   useEffect(() => {
     const startPulse = () => {
       Animated.loop(
@@ -65,19 +110,60 @@ export default function App() {
 
     if (isActive) {
       pulseAnim.setValue(1);
+      // Faster, aggressive pulse when running
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.1, duration: 350, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.15, duration: 250, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
         ])
       ).start();
     } else {
-      startPulse();
+      startPulse(); // Slower idle pace
     }
     return () => pulseAnim.stopAnimation();
   }, [isActive, pulseAnim]);
 
+  const handleSessionComplete = () => {
+    setIsActive(false);
+
+    let newXp = xp + 10;
+    let newLevel = level;
+    let type = 'conquered';
+    let newHp = hp;
+    let newMp = mp;
+
+    if (newXp >= 100) {
+      newLevel += 1;
+      newXp = newXp - 100; // Wrap XP around
+      type = 'levelup';
+      // Level up rewards: restore HP/MP
+      newHp = 100;
+      newMp = 100;
+      setHp(newHp);
+      setMp(newMp);
+    }
+
+    setXp(newXp);
+    setLevel(newLevel);
+    
+    setOverlayType(type);
+    setShowOverlay(true);
+
+    saveStatsAsync(newLevel, newXp, newHp, newMp);
+  };
+
   const toggleTimer = () => setIsActive(!isActive);
+
+  // DEV TOOL: Un-comment or press the hidden button to skip timer for testing
+  const skipTimerForDev = () => {
+    setTimeLeft(1);
+    setIsActive(true);
+  };
+
+  const resetAfterVictory = () => {
+    setShowOverlay(false);
+    setTimeLeft(25 * 60);
+  };
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -87,38 +173,41 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2A2E35" />
       
-      {/* 1. Header Row Context */}
+      {/* Header Row Context */}
       <View style={styles.topBar}>
         <View style={styles.profileSection}>
-          <View style={styles.avatarBox}>
+          <TouchableOpacity onPress={skipTimerForDev} activeOpacity={0.8} style={styles.avatarBox}>
             <Text style={styles.avatarEmoji}>👤</Text>
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.username}>NEON_CHROMA</Text>
+            <Text style={styles.levelText}>LVL {level} | XP: {xp}/100</Text>
           </View>
-          <Text style={styles.username}>NEON_CHROMA</Text>
           <Text style={styles.lightningIcon}>⚡</Text>
         </View>
       </View>
       
       <View style={styles.divider} />
 
-      {/* 2. Progress Bars */}
+      {/* Progress Bars */}
       <View style={styles.statsSection}>
         <View style={styles.statContainer}>
           <View style={styles.statRow}>
             <Text style={[styles.statLabel, {color: '#FF647C'}]}>HP / STAMINA</Text>
-            <Text style={[styles.statValue, {color: '#FF647C'}]}>88%</Text>
+            <Text style={[styles.statValue, {color: '#FF647C'}]}>{hp}%</Text>
           </View>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, {backgroundColor: '#FF647C', width: '88%'}]} />
+            <View style={[styles.progressBarFill, {backgroundColor: '#FF647C', width: `${hp}%`}]} />
           </View>
         </View>
         
         <View style={styles.statContainer}>
           <View style={styles.statRow}>
             <Text style={[styles.statLabel, {color: '#42E6F5'}]}>MP / FOCUS</Text>
-            <Text style={[styles.statValue, {color: '#42E6F5'}]}>42%</Text>
+            <Text style={[styles.statValue, {color: '#42E6F5'}]}>{mp}%</Text>
           </View>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, {backgroundColor: '#42E6F5', width: '42%'}]} />
+            <View style={[styles.progressBarFill, {backgroundColor: '#42E6F5', width: `${mp}%`}]} />
           </View>
         </View>
       </View>
@@ -126,14 +215,14 @@ export default function App() {
       {/* Main Content Area */}
       <View style={styles.mainContent}>
         
-        {/* Dragon Graphic */}
+        {/* Sword Graphic */}
         <View style={styles.dragonContainer}>
           <Animated.View style={[styles.dragonWrapper, { transform: [{ scale: pulseAnim }] }]}>
             <NeonSword color="#39FF14" />
           </Animated.View>
         </View>
 
-        {/* Dragon Banner */}
+        {/* Banner */}
         <View style={styles.bannerContainer}>
           <View style={styles.bannerLeftDrop} />
           <Text style={styles.bannerText}>ANCIENT DISTRACTION BEAST</Text>
@@ -184,6 +273,26 @@ export default function App() {
         </View>
       </View>
 
+      {/* Full Screen Victory Overlay */}
+      {showOverlay && (
+        <View style={styles.overlayContainer}>
+          <View style={styles.overlayContent}>
+            <Text style={[styles.overlayTitle, overlayType === 'levelup' && { color: '#F9E154' }]}>
+              {overlayType === 'levelup' ? 'LEVEL UP!' : 'CONQUERED'}
+            </Text>
+            
+            <View style={styles.rewardBox}>
+              <Text style={styles.rewardText}>+10 XP EARNED</Text>
+              {overlayType === 'levelup' && <Text style={styles.levelUpText}>HP & MP RESTORED</Text>}
+            </View>
+
+            <TouchableOpacity style={styles.dismissBtn} onPress={resetAfterVictory}>
+              <Text style={styles.dismissBtnText}>ONWARD</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
     </SafeAreaView>
   );
 }
@@ -223,6 +332,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#39FF14',
     letterSpacing: 2,
+  },
+  levelText: {
+    fontSize: 10,
+    color: '#8A94A6',
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 2,
   },
   lightningIcon: {
     fontSize: 18,
@@ -402,5 +518,69 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#6A7486',
     letterSpacing: 1,
+  },
+  
+  // Overlay Styles
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(28, 32, 37, 0.95)',
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  overlayContent: {
+    width: '100%',
+    backgroundColor: '#2A2E35',
+    borderWidth: 2,
+    borderColor: '#39FF14',
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 30,
+    elevation: 20,
+  },
+  overlayTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#39FF14',
+    letterSpacing: 4,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  rewardBox: {
+    backgroundColor: '#1E2227',
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+    marginBottom: 30,
+  },
+  rewardText: {
+    color: '#ECECEC',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  levelUpText: {
+    color: '#F9E154',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 10,
+    letterSpacing: 1,
+  },
+  dismissBtn: {
+    backgroundColor: '#39FF14',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+  },
+  dismissBtnText: {
+    color: '#2A2E35',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 3,
   },
 });
