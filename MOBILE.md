@@ -18,9 +18,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 2 |
-| Total Weight (kg) | 25 |
-| Total Time (min) | 90 |
+| Total Iterations | 3 |
+| Total Weight (kg) | 45 |
+| Total Time (min) | 135 |
 | Failed Attempts | 1 |
 
 ---
@@ -90,5 +90,37 @@
 **Screenshot:** `Local Testing (Expo Go)`
 
 **Commit:** `Stage 2 Iteration - The Gamification Layer`
+
+---
+
+### 🏋️ Iteration 3 
+
+| Field | Value |
+|-------|-------|
+| Feature | `Stage 3: Navigation & Modular Screens` |
+| Weight | `20 kg` |
+| Tool Used | `Antigravity` |
+| Time | `45 min` |
+| Attempts | `1` |
+| Status | ✅ COMPLETED |
+
+**Prompt given to AI:**
+```
+"Stage 3: Navigation and Modular Screens. Let's unlock the bottom menu.
+1. Navigation Logic... 
+2. Stats Screen... 
+3. Gear Screen... 
+4. Design Consistency..."
+```
+
+**What happened:**
+- **Navigation:** Implemented a highly performant `currentTab` state-based routing system (`BATTLE`, `STATS`, `SHOP`, `GEAR`) tethered to the bottom tabs, systematically bypassing heavyweight external navigator dependencies. 
+- **Feature Breakdown (Stats):** Engineered a fully responsive `renderStatsScreen` displaying the new persistent `battlesWon` async stat, generating an RPG-style `Total Focus Minutes` calculation (`battlesWon * 25`), and a dynamic Neon Pink XP progression bar mapped natively to `xp / 100`.
+- **Feature Breakdown (Gear):** Designed the `renderGearScreen` grid array structure mapping 6 armory slots. Successfully embedded a dynamically scaled `Neon Katana` SVG right into Slot 1, tagged with a glowing `[EQUIPPED]` badge, locking down the remaining 5 unearned weapon slots. 
+- **Technical Highlight:** Because the architecture relies on a centralized App state model rather than aggressive component unmounts, transitioning completely out of the BATTLE tab back and forth perfectly preserves the active 25:00 countdown timer sequence in the background safely.
+
+**Screenshot:** `Local Testing (Expo Go)`
+
+**Commit:** `Stage 3 Layout Modularity & Routing`
 
 ---

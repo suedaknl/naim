@@ -1,40 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Animated, Easing, SafeAreaView, StatusBar, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Animated, Easing, SafeAreaView, StatusBar, Dimensions, ScrollView } from 'react-native';
 import Svg, { Polygon, Path, Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-const NeonSword = ({ color = '#39FF14' }) => (
-  <Svg viewBox="0 0 100 300" width={100} height={240}>
-    {/* Energy Core / Main Blade */}
-    <Polygon points="50,10 65,40 60,200 40,200 35,40" fill={color} />
-    {/* Inner super-hot white energy core */}
-    <Polygon points="50,20 55,45 52,195 48,195 45,45" fill="#FFFFFF" fillOpacity="0.5" />
-    
-    {/* Cyber-ninja Tsuba (Crossguard) */}
-    <Polygon points="20,200 80,200 85,210 75,220 25,220 15,210" fill="#2A2E35" stroke={color} strokeWidth="3" />
-    <Path d="M30,210 L70,210" fill="none" stroke={color} strokeWidth="1.5" />
-    
-    {/* Mechanical Hilt */}
-    <Polygon points="40,220 60,220 57,270 43,270" fill="#2A2E35" stroke={color} strokeWidth="2" />
-    
-    {/* Grip textures */}
-    <Path d="M42,230 L58,230 M42,240 L58,240 M43,250 L57,250 M44,260 L56,260" fill="none" stroke={color} strokeWidth="2" />
-    
-    {/* Pommel */}
-    <Polygon points="35,270 65,270 60,285 40,285" fill={color} />
-    <Circle cx="50" cy="277" r="2" fill="#2A2E35" />
-    
-    {/* Abstract tech floating pieces near blade */}
-    <Polygon points="25,40 30,35 30,60 25,65" fill={color} />
-    <Polygon points="75,40 70,35 70,60 75,65" fill={color} />
-    <Polygon points="30,80 33,75 33,120 30,125" fill={color} fillOpacity="0.5" />
-    <Polygon points="70,80 67,75 67,120 70,125" fill={color} fillOpacity="0.5" />
-  </Svg>
+const NeonSword = ({ color = '#39FF14', scale = 1 }) => (
+  // Scale parameter allows usage in Gear Screen (miniature)
+  <View style={{ transform: [{ scale }] }}>
+    <Svg viewBox="0 0 100 300" width={100} height={240}>
+      {/* Energy Core / Main Blade */}
+      <Polygon points="50,10 65,40 60,200 40,200 35,40" fill={color} />
+      {/* Inner super-hot white energy core */}
+      <Polygon points="50,20 55,45 52,195 48,195 45,45" fill="#FFFFFF" fillOpacity="0.5" />
+      
+      {/* Cyber-ninja Tsuba (Crossguard) */}
+      <Polygon points="20,200 80,200 85,210 75,220 25,220 15,210" fill="#2A2E35" stroke={color} strokeWidth="3" />
+      <Path d="M30,210 L70,210" fill="none" stroke={color} strokeWidth="1.5" />
+      
+      {/* Mechanical Hilt */}
+      <Polygon points="40,220 60,220 57,270 43,270" fill="#2A2E35" stroke={color} strokeWidth="2" />
+      
+      {/* Grip textures */}
+      <Path d="M42,230 L58,230 M42,240 L58,240 M43,250 L57,250 M44,260 L56,260" fill="none" stroke={color} strokeWidth="2" />
+      
+      {/* Pommel */}
+      <Polygon points="35,270 65,270 60,285 40,285" fill={color} />
+      <Circle cx="50" cy="277" r="2" fill="#2A2E35" />
+      
+      {/* Abstract tech floating pieces near blade */}
+      <Polygon points="25,40 30,35 30,60 25,65" fill={color} />
+      <Polygon points="75,40 70,35 70,60 75,65" fill={color} />
+      <Polygon points="30,80 33,75 33,120 30,125" fill={color} fillOpacity="0.5" />
+      <Polygon points="70,80 67,75 67,120 70,125" fill={color} fillOpacity="0.5" />
+    </Svg>
+  </View>
 );
 
 export default function App() {
+  const [currentTab, setCurrentTab] = useState('BATTLE');
+
+  // Battle State
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
 
@@ -43,14 +49,14 @@ export default function App() {
   const [xp, setXp] = useState(0);
   const [hp, setHp] = useState(88);
   const [mp, setMp] = useState(42);
+  const [battlesWon, setBattlesWon] = useState(0);
 
   // Overlay State
   const [showOverlay, setShowOverlay] = useState(false);
-  const [overlayType, setOverlayType] = useState('conquered'); // 'conquered' or 'levelup'
+  const [overlayType, setOverlayType] = useState('conquered'); 
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Load Persisted Data
   useEffect(() => {
     const loadStats = async () => {
       try {
@@ -58,11 +64,13 @@ export default function App() {
         const savedXp = await AsyncStorage.getItem('@xp');
         const savedHp = await AsyncStorage.getItem('@hp');
         const savedMp = await AsyncStorage.getItem('@mp');
+        const savedBattles = await AsyncStorage.getItem('@battlesWon');
         
         if (savedLevel !== null) setLevel(parseInt(savedLevel));
         if (savedXp !== null) setXp(parseInt(savedXp));
         if (savedHp !== null) setHp(parseInt(savedHp));
         if (savedMp !== null) setMp(parseInt(savedMp));
+        if (savedBattles !== null) setBattlesWon(parseInt(savedBattles));
       } catch (e) {
         console.warn('Failed to load storage', e);
       }
@@ -70,19 +78,18 @@ export default function App() {
     loadStats();
   }, []);
 
-  // Save Stats Helper
-  const saveStatsAsync = async (nLevel, nXp, nHp, nMp) => {
+  const saveStatsAsync = async (nLevel, nXp, nHp, nMp, nBattles) => {
     try {
       await AsyncStorage.setItem('@level', nLevel.toString());
       await AsyncStorage.setItem('@xp', nXp.toString());
       await AsyncStorage.setItem('@hp', nHp.toString());
       await AsyncStorage.setItem('@mp', nMp.toString());
+      await AsyncStorage.setItem('@battlesWon', nBattles.toString());
     } catch (e) {
       console.warn('Failed to save to storage', e);
     }
   };
 
-  // Timer Effect
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
@@ -90,14 +97,12 @@ export default function App() {
         setTimeLeft((time) => time - 1);
       }, 1000);
     } else if (isActive && timeLeft === 0) {
-      // Time is up! Trigger Victory Logic
       clearInterval(interval);
       handleSessionComplete();
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  // Pulse effect Effect
   useEffect(() => {
     const startPulse = () => {
       Animated.loop(
@@ -110,7 +115,6 @@ export default function App() {
 
     if (isActive) {
       pulseAnim.setValue(1);
-      // Faster, aggressive pulse when running
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.15, duration: 250, useNativeDriver: true }),
@@ -118,7 +122,7 @@ export default function App() {
         ])
       ).start();
     } else {
-      startPulse(); // Slower idle pace
+      startPulse(); 
     }
     return () => pulseAnim.stopAnimation();
   }, [isActive, pulseAnim]);
@@ -131,30 +135,30 @@ export default function App() {
     let type = 'conquered';
     let newHp = hp;
     let newMp = mp;
+    let newBattles = battlesWon + 1;
 
     if (newXp >= 100) {
       newLevel += 1;
-      newXp = newXp - 100; // Wrap XP around
+      newXp = newXp - 100;
       type = 'levelup';
-      // Level up rewards: restore HP/MP
       newHp = 100;
       newMp = 100;
-      setHp(newHp);
-      setMp(newMp);
     }
 
     setXp(newXp);
     setLevel(newLevel);
+    setHp(newHp);
+    setMp(newMp);
+    setBattlesWon(newBattles);
     
     setOverlayType(type);
     setShowOverlay(true);
 
-    saveStatsAsync(newLevel, newXp, newHp, newMp);
+    saveStatsAsync(newLevel, newXp, newHp, newMp, newBattles);
   };
 
   const toggleTimer = () => setIsActive(!isActive);
 
-  // DEV TOOL: Un-comment or press the hidden button to skip timer for testing
   const skipTimerForDev = () => {
     setTimeLeft(1);
     setIsActive(true);
@@ -165,15 +169,129 @@ export default function App() {
     setTimeLeft(25 * 60);
   };
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-  const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  // ----- MODULAR RENDERS -----
+
+  const renderBattleScreen = () => {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    return (
+      <View style={styles.mainContent}>
+        <View style={styles.dragonContainer}>
+          <Animated.View style={[styles.dragonWrapper, { transform: [{ scale: pulseAnim }] }]}>
+            <NeonSword color="#39FF14" />
+          </Animated.View>
+        </View>
+
+        <View style={styles.bannerContainer}>
+          <View style={styles.bannerLeftDrop} />
+          <Text style={styles.bannerText}>FOCUS WEAPON ENGAGED</Text>
+          <View style={styles.bannerRightDrop} />
+        </View>
+
+        <View style={styles.timerBox}>
+          <View style={[styles.cornerSquare, styles.topLeft]} />
+          <View style={[styles.cornerSquare, styles.topRight]} />
+          <View style={[styles.cornerSquare, styles.bottomLeft]} />
+          <View style={[styles.cornerSquare, styles.bottomRight]} />
+          
+          <Text style={styles.chronoText}>C H R O N O - L I N K</Text>
+          <Text style={styles.chronoText}>S Y N C H R O N I Z E D</Text>
+          <Text style={styles.timerText}>{formattedTime}</Text>
+        </View>
+
+        <TouchableOpacity style={styles.startBtnContainer} onPress={toggleTimer} activeOpacity={0.8}>
+          <View style={styles.startBtnBg} />
+          <View style={styles.startBtnFront}>
+            <Text style={styles.startBtnTitle}>{isActive ? 'PAUSE BATTLE' : 'START FOCUS BATTLE'}</Text>
+            <Text style={styles.startBtnSubtitle}>P R E P A R E  F O R  D E E P  W O R K</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderStatsScreen = () => {
+    const totalMinutes = battlesWon * 25;
+    const xpPercent = Math.min(100, (xp / 100) * 100);
+
+    return (
+      <View style={styles.statsTabContent}>
+        <Text style={styles.sectionHeader}>COMBAT ANALYTICS</Text>
+        <View style={styles.dividerBright} />
+
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsLabel}>TOTAL BATTLES WON</Text>
+          <Text style={styles.analyticsBigNumber}>{battlesWon}</Text>
+        </View>
+
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsLabel}>TOTAL FOCUS MINUTES</Text>
+          <Text style={[styles.analyticsBigNumber, { color: '#42E6F5' }]}>{totalMinutes}</Text>
+        </View>
+
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsLabel}>CURRENT LEVEL</Text>
+          <Text style={[styles.analyticsBigNumber, { color: '#FF647C' }]}>{level}</Text>
+          
+          <View style={styles.xpBarContainer}>
+            <Text style={styles.xpText}>{xp} / 100 XP</Text>
+            <View style={styles.xpBarBg}>
+              <View style={[styles.xpBarFill, { width: `${xpPercent}%` }]} />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderGearScreen = () => {
+    // 6 slot layout
+    return (
+      <View style={styles.gearTabContent}>
+        <Text style={styles.sectionHeader}>ARMORY</Text>
+        <View style={styles.dividerBright} />
+        
+        <ScrollView contentContainerStyle={styles.gearGrid}>
+          {/* EQUIPPED SLOT */}
+          <View style={[styles.gearSlot, styles.gearSlotEquipped]}>
+            <Text style={styles.equippedBadge}>[ EQUIPPED ]</Text>
+            <View style={styles.gearIconWrapper}>
+              {/* Scaled down version of sword */}
+              <NeonSword color="#39FF14" scale={0.4} />
+            </View>
+            <Text style={styles.gearName}>NEON KATANA</Text>
+          </View>
+
+          {/* LOCKED SLOTS */}
+          {[2, 3, 4, 5, 6].map((idx) => (
+            <View key={idx} style={styles.gearSlot}>
+              <Text style={styles.lockedIcon}>🔒</Text>
+              <Text style={styles.gearNameLocked}>LOCKED SLOT</Text>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderShopScreen = () => {
+    return (
+      <View style={styles.comingSoonContainer}>
+        <Text style={styles.comingSoonText}>MARKETPLACE</Text>
+        <Text style={styles.comingSoonSub}>DOWNLOADING ASSETS...</Text>
+      </View>
+    );
+  };
+
+  // ----- MAIN VIEW -----
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2A2E35" />
       
-      {/* Header Row Context */}
+      {/* Universal Header */}
       <View style={styles.topBar}>
         <View style={styles.profileSection}>
           <TouchableOpacity onPress={skipTimerForDev} activeOpacity={0.8} style={styles.avatarBox}>
@@ -186,10 +304,9 @@ export default function App() {
           <Text style={styles.lightningIcon}>⚡</Text>
         </View>
       </View>
-      
       <View style={styles.divider} />
 
-      {/* Progress Bars */}
+      {/* Universal Progress Bars */}
       <View style={styles.statsSection}>
         <View style={styles.statContainer}>
           <View style={styles.statRow}>
@@ -212,68 +329,50 @@ export default function App() {
         </View>
       </View>
 
-      {/* Main Content Area */}
-      <View style={styles.mainContent}>
-        
-        {/* Sword Graphic */}
-        <View style={styles.dragonContainer}>
-          <Animated.View style={[styles.dragonWrapper, { transform: [{ scale: pulseAnim }] }]}>
-            <NeonSword color="#39FF14" />
-          </Animated.View>
-        </View>
-
-        {/* Banner */}
-        <View style={styles.bannerContainer}>
-          <View style={styles.bannerLeftDrop} />
-          <Text style={styles.bannerText}>ANCIENT DISTRACTION BEAST</Text>
-          <View style={styles.bannerRightDrop} />
-        </View>
-
-        {/* Timer Box */}
-        <View style={styles.timerBox}>
-          {/* Corner Squares */}
-          <View style={[styles.cornerSquare, styles.topLeft]} />
-          <View style={[styles.cornerSquare, styles.topRight]} />
-          <View style={[styles.cornerSquare, styles.bottomLeft]} />
-          <View style={[styles.cornerSquare, styles.bottomRight]} />
-          
-          <Text style={styles.chronoText}>C H R O N O - L I N K</Text>
-          <Text style={styles.chronoText}>S Y N C H R O N I Z E D</Text>
-          <Text style={styles.timerText}>{formattedTime}</Text>
-        </View>
-
-        {/* Start Button */}
-        <TouchableOpacity style={styles.startBtnContainer} onPress={toggleTimer} activeOpacity={0.8}>
-          <View style={styles.startBtnBg} />
-          <View style={styles.startBtnFront}>
-            <Text style={styles.startBtnTitle}>{isActive ? 'PAUSE BATTLE' : 'START FOCUS BATTLE'}</Text>
-            <Text style={styles.startBtnSubtitle}>P R E P A R E  F O R  D E E P  W O R K</Text>
-          </View>
-        </TouchableOpacity>
-
+      {/* Render Active Tab */}
+      <View style={styles.tabContainer}>
+        {currentTab === 'BATTLE' && renderBattleScreen()}
+        {currentTab === 'STATS' && renderStatsScreen()}
+        {currentTab === 'GEAR' && renderGearScreen()}
+        {currentTab === 'SHOP' && renderShopScreen()}
       </View>
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <View style={[styles.navItem, styles.navItemActive]}>
-          <Text style={[styles.navIcon, {color: '#39FF14'}]}>⚔️</Text>
-          <Text style={[styles.navText, {color: '#39FF14'}]}>BATTLE</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Text style={styles.navIcon}>📊</Text>
-          <Text style={styles.navText}>STATS</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Text style={styles.navIcon}>🏪</Text>
-          <Text style={styles.navText}>SHOP</Text>
-        </View>
-        <View style={styles.navItem}>
-          <Text style={styles.navIcon}>⚙️</Text>
-          <Text style={styles.navText}>GEAR</Text>
-        </View>
+        <TouchableOpacity 
+          style={[styles.navItem, currentTab === 'BATTLE' && styles.navItemActive]}
+          onPress={() => setCurrentTab('BATTLE')}
+        >
+          <Text style={[styles.navIcon, currentTab === 'BATTLE' && {color: '#39FF14'}]}>⚔️</Text>
+          <Text style={[styles.navText, currentTab === 'BATTLE' && {color: '#39FF14'}]}>BATTLE</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.navItem, currentTab === 'STATS' && styles.navItemActive]}
+          onPress={() => setCurrentTab('STATS')}
+        >
+          <Text style={[styles.navIcon, currentTab === 'STATS' && {color: '#39FF14'}]}>📊</Text>
+          <Text style={[styles.navText, currentTab === 'STATS' && {color: '#39FF14'}]}>STATS</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navItem, currentTab === 'SHOP' && styles.navItemActive]}
+          onPress={() => setCurrentTab('SHOP')}
+        >
+          <Text style={[styles.navIcon, currentTab === 'SHOP' && {color: '#39FF14'}]}>🏪</Text>
+          <Text style={[styles.navText, currentTab === 'SHOP' && {color: '#39FF14'}]}>SHOP</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navItem, currentTab === 'GEAR' && styles.navItemActive]}
+          onPress={() => setCurrentTab('GEAR')}
+        >
+          <Text style={[styles.navIcon, currentTab === 'GEAR' && {color: '#39FF14'}]}>⚙️</Text>
+          <Text style={[styles.navText, currentTab === 'GEAR' && {color: '#39FF14'}]}>GEAR</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Full Screen Victory Overlay */}
+      {/* Victory Overlay */}
       {showOverlay && (
         <View style={styles.overlayContainer}>
           <View style={styles.overlayContent}>
@@ -298,9 +397,13 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  // General & Header Styles
   container: {
     flex: 1,
     backgroundColor: '#2A2E35', // Matte charcoal grey
+  },
+  tabContainer: {
+    flex: 1,
   },
   topBar: {
     paddingHorizontal: 20,
@@ -380,6 +483,8 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
   },
+
+  // Battle Screen Styles
   mainContent: {
     flex: 1,
     alignItems: 'center',
@@ -489,6 +594,159 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginTop: 4,
   },
+
+  // Stats Screen Styles
+  statsTabContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 4,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  dividerBright: {
+    height: 2,
+    backgroundColor: '#39FF14',
+    width: '100%',
+    marginBottom: 20,
+  },
+  analyticsCard: {
+    backgroundColor: '#1E2227',
+    borderWidth: 1,
+    borderColor: '#2E333C',
+    padding: 20,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  analyticsLabel: {
+    color: '#8A94A6',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+  analyticsBigNumber: {
+    color: '#39FF14',
+    fontSize: 48,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+  xpBarContainer: {
+    width: '100%',
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  xpText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  xpBarBg: {
+    width: '100%',
+    height: 16,
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: '#FF647C',
+  },
+  xpBarFill: {
+    height: '100%',
+    backgroundColor: '#FF647C',
+  },
+
+  // Gear Screen Styles
+  gearTabContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  gearGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingBottom: 20,
+  },
+  gearSlot: {
+    width: '48%',
+    aspectRatio: 1,
+    backgroundColor: '#1E2227',
+    borderWidth: 2,
+    borderColor: '#2E333C',
+    marginBottom: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  gearSlotEquipped: {
+    borderColor: '#39FF14',
+    backgroundColor: '#1A2F20',
+    shadowColor: '#39FF14',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  equippedBadge: {
+    position: 'absolute',
+    top: 10,
+    color: '#39FF14',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    zIndex: 10,
+  },
+  gearIconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 100,
+  },
+  gearName: {
+    position: 'absolute',
+    bottom: 10,
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  lockedIcon: {
+    fontSize: 32,
+    opacity: 0.5,
+  },
+  gearNameLocked: {
+    position: 'absolute',
+    bottom: 10,
+    color: '#6A7486',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+
+  // Coming Soon Dummy
+  comingSoonContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  comingSoonText: {
+    color: '#42E6F5',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 4,
+  },
+  comingSoonSub: {
+    color: '#6A7486',
+    fontSize: 12,
+    marginTop: 10,
+    letterSpacing: 2,
+  },
+
+  // Bottom Navigation
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
