@@ -18,9 +18,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 3 |
-| Total Weight (kg) | 45 |
-| Total Time (min) | 135 |
+| Total Iterations | 4 |
+| Total Weight (kg) | 65 |
+| Total Time (min) | 180 |
 | Failed Attempts | 1 |
 
 ---
@@ -122,5 +122,38 @@
 **Screenshot:** `Local Testing (Expo Go)`
 
 **Commit:** `Stage 3 Layout Modularity & Routing`
+
+---
+
+### 🏋️ Iteration 4 
+
+| Field | Value |
+|-------|-------|
+| Feature | `Stage 4: Nexus Shop, Economy & Custom Equipping` |
+| Weight | `20 kg` |
+| Tool Used | `Antigravity` |
+| Time | `45 min` |
+| Attempts | `1` |
+| Status | ✅ COMPLETED |
+
+**Prompt given to AI:**
+```
+"Stage 4 / 4.5: The Nexus Shop and Economy System. Let's make the Gold matter.
+1. Economy Logic... 
+2. Shop UI... 
+3. Equip Logic... 
+4. Visual Sync..."
+```
+
+**What happened:**
+- **Economy & Storage:** Engineered a `gold` persistence hook explicitly mapping through `AsyncStorage`. Bootstrapped the system with a `500 GOLD` developer bonus and tied global session victories to a consistent `+50 GOLD` base reward loop. 
+- **The Nexus Marketplace:** Launched the `SHOP` tab parsing a dynamic `WEAPON_DB` dictionary. Handled rigorous transaction processing mechanisms: balance verification logic, UI flash feedback alerts (`CHA-CHING!`), and pushing purchased items directly into an `inventory` array.
+- **Armory Sync:** The `GEAR` grid actively maps the `inventory` array. Tapping an `[ OWNED ]` item commits a persistent `@equipped` logic flag, immediately throwing massive custom layout bounds dynamically across the slot to signify it is live.
+- **Custom Visual Rendering:** Hand-coded 3 massive geometric React Native SVGs (`Void Blade`, `Cyber Shield`, `Plasma Whip`). Returning to the `BATTLE` tab automatically parses the exact geometry and renders whichever custom SVG currently holds the `equipped` state inside the pulsing Chrono-Ring!
+- **Game Engine Multipliers:** Mapped unique `powerXp` and `powerGold` metrics to the global dictionary. As an example, equipping the `Plasma Whip` fundamentally overwrites base scaling formulas, injecting dynamic `x2.0` multi-grants perfectly into the Victory overlay screen. 
+
+**Screenshot:** `Local Testing (Expo Go)`
+
+**Commit:** `Stage 4 Nexus Economy Matrix & Dynamic Multipliers`
 
 ---
